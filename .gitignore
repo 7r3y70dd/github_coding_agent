@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.*.example
+.local/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/

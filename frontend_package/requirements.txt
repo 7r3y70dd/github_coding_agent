@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+boto3
+requests
+pydantic
+authlib
+starlette
+itsdangerous>=2.2,<3
