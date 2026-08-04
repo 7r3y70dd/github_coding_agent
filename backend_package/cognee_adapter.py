@@ -1,14 +1,4 @@
 # agent_runner/cognee_adapter.py
-"""Cognee integration for the agent worker.
-
-Design goals:
-- Keep Cognee optional. When COGNEE_ENABLED is not "1", all public functions no-op.
-- Configure Cognee before import-time defaults can fall back to OpenAI.
-- Keep current repo memory separated from historical task memory.
-- Keep code docs, coding rules, and task history in separate datasets so retrieval does not
-  depend on node-set filtering behavior for CHUNKS search.
-- Support Cognee v1 remember/recall/forget while falling back to add/cognify/search where practical.
-"""
 
 from __future__ import annotations
 
@@ -325,8 +315,6 @@ def repo_scope_snapshot_key(
     head_sha: str = "",
     scope_hash: str = "",
 ) -> str:
-    # Stable per repo/ref/scope. The head SHA is intentionally ignored so incremental
-    # updates do not make unchanged chunks look stale during snapshot filtering.
     ref = (ref or "main").strip() or "main"
     scope_hash = (scope_hash or "default").strip() or "default"
     return f"repo_scope::{repo or 'default'}::{ref}::{scope_hash}"
@@ -378,7 +366,6 @@ def _snapshot_mode() -> bool:
         return True
     if REPO_DATASET_MODE == "current":
         return False
-    # auto: use current datasets when forget is available; otherwise avoid stale data by versioning.
     return not hasattr(cognee, "forget")
 
 
