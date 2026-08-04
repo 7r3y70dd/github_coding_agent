@@ -19,7 +19,9 @@ from worker import get_ready_cognee_index, search_issue_context_scoped
 
 
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("BEDROCK_REGION", "us-east-1"))
-DEBUG_QUEUE_URL = os.environ["DEBUG_QUEUE_URL"]
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "").strip() or None
+DEBUG_QUEUE_URL = os.environ.get("DEBUG_QUEUE_URL", "").strip()
+DEBUG_QUEUE_NAME = os.environ.get("DEBUG_QUEUE_NAME", "").strip()
 RUNS_TABLE = os.environ.get("RUNS_TABLE", "agent_runs")
 
 DEBUG_WORKDIR = os.environ.get("DEBUG_WORKDIR", "/var/lib/debug-runner/work")
@@ -34,9 +36,18 @@ DEBUG_VENV_DIR = os.environ.get("DEBUG_VENV_DIR", ".venv")
 
 EVENT_LOG = os.environ.get("DEBUG_EVENT_LOG", os.path.join(DEBUG_WORKDIR, "debug-events.jsonl"))
 
-sqs = boto3.client("sqs", region_name=AWS_REGION)
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+_aws_kwargs = {"region_name": AWS_REGION}
+if AWS_ENDPOINT_URL:
+    _aws_kwargs["endpoint_url"] = AWS_ENDPOINT_URL
+
+sqs = boto3.client("sqs", **_aws_kwargs)
+dynamodb = boto3.resource("dynamodb", **_aws_kwargs)
 table = dynamodb.Table(RUNS_TABLE)
+
+if not DEBUG_QUEUE_URL and DEBUG_QUEUE_NAME:
+    DEBUG_QUEUE_URL = sqs.get_queue_url(QueueName=DEBUG_QUEUE_NAME)["QueueUrl"]
+if not DEBUG_QUEUE_URL:
+    raise RuntimeError("Set DEBUG_QUEUE_URL, or set DEBUG_QUEUE_NAME so the queue URL can be resolved.")
 
 
 def now_ms() -> int:

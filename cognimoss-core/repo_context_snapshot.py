@@ -12,6 +12,7 @@ import boto3
 from repo_indexing import to_dynamo_value
 
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("BEDROCK_REGION", "us-east-1"))
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "").strip() or None
 RUNS_TABLE = os.environ.get("RUNS_TABLE", os.environ.get("COGNEE_INDEX_TABLE", "agent_runs"))
 CHAT_CONTEXT_BUCKET = os.environ.get("CHAT_CONTEXT_BUCKET", "")
 CHAT_CONTEXT_PREFIX = os.environ.get("CHAT_CONTEXT_PREFIX", "repo-chat-context")
@@ -19,8 +20,12 @@ CHAT_SNAPSHOT_MAX_FILES = int(os.environ.get("CHAT_SNAPSHOT_MAX_FILES", "120"))
 CHAT_SNAPSHOT_FILE_CHARS = int(os.environ.get("CHAT_SNAPSHOT_FILE_CHARS", "6000"))
 CHAT_CONTEXT_MAX_CHARS = int(os.environ.get("CHAT_CONTEXT_MAX_CHARS", "24000"))
 
-s3 = boto3.client("s3", region_name=AWS_REGION)
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+_aws_kwargs = {"region_name": AWS_REGION}
+if AWS_ENDPOINT_URL:
+    _aws_kwargs["endpoint_url"] = AWS_ENDPOINT_URL
+
+s3 = boto3.client("s3", **_aws_kwargs)
+dynamodb = boto3.resource("dynamodb", **_aws_kwargs)
 table = dynamodb.Table(RUNS_TABLE)
 
 

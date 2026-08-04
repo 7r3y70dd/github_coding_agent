@@ -40,7 +40,9 @@ from platform_lock import global_task_lock
 from repo_context_snapshot import save_chat_context_snapshot
 
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("BEDROCK_REGION", "us-east-1"))
-COGNEE_QUEUE_URL = os.environ["COGNEE_QUEUE_URL"]
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "").strip() or None
+COGNEE_QUEUE_URL = os.environ.get("COGNEE_QUEUE_URL", "").strip()
+COGNEE_QUEUE_NAME = os.environ.get("COGNEE_QUEUE_NAME", "").strip()
 COGNEE_INDEX_TABLE = os.environ.get("COGNEE_INDEX_TABLE", os.environ.get("RUNS_TABLE", "agent_runs"))
 WORKDIR = os.environ.get("COGNEE_WORKDIR", "/var/lib/cognee-indexer/work")
 POLL_SECONDS = int(os.environ.get("POLL_SECONDS", "5"))
@@ -50,9 +52,18 @@ MAX_INDEX_FILES = int(os.environ.get("COGNEE_INDEX_MAX_FILES", "5000"))
 COGNEE_ADD_BATCH_SIZE = int(os.environ.get("COGNEE_ADD_BATCH_SIZE", "20"))
 EVENT_LOG = os.environ.get("EVENT_LOG", os.path.join(WORKDIR, "cognee-indexer-events.jsonl"))
 
-sqs = boto3.client("sqs", region_name=AWS_REGION)
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+_aws_kwargs = {"region_name": AWS_REGION}
+if AWS_ENDPOINT_URL:
+    _aws_kwargs["endpoint_url"] = AWS_ENDPOINT_URL
+
+sqs = boto3.client("sqs", **_aws_kwargs)
+dynamodb = boto3.resource("dynamodb", **_aws_kwargs)
 table = dynamodb.Table(COGNEE_INDEX_TABLE)
+
+if not COGNEE_QUEUE_URL and COGNEE_QUEUE_NAME:
+    COGNEE_QUEUE_URL = sqs.get_queue_url(QueueName=COGNEE_QUEUE_NAME)["QueueUrl"]
+if not COGNEE_QUEUE_URL:
+    raise RuntimeError("Set COGNEE_QUEUE_URL, or set COGNEE_QUEUE_NAME so the queue URL can be resolved.")
 
 
 def now_ms() -> int:

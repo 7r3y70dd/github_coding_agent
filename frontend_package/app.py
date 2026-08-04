@@ -70,10 +70,14 @@ else:
     from repo_chat import answer_repo_chat
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "").strip() or None
 RUNS_TABLE = os.environ.get("RUNS_TABLE", "agent_runs")
-AGENT_QUEUE_URL = os.environ.get("AGENT_QUEUE_URL", "")
-COGNEE_QUEUE_URL = os.environ.get("COGNEE_QUEUE_URL", "")
-DEBUG_QUEUE_URL = os.environ.get("DEBUG_QUEUE_URL", "")
+AGENT_QUEUE_URL = os.environ.get("AGENT_QUEUE_URL", "").strip()
+COGNEE_QUEUE_URL = os.environ.get("COGNEE_QUEUE_URL", "").strip()
+DEBUG_QUEUE_URL = os.environ.get("DEBUG_QUEUE_URL", "").strip()
+AGENT_QUEUE_NAME = os.environ.get("AGENT_QUEUE_NAME", "").strip()
+COGNEE_QUEUE_NAME = os.environ.get("COGNEE_QUEUE_NAME", "").strip()
+DEBUG_QUEUE_NAME = os.environ.get("DEBUG_QUEUE_NAME", "").strip()
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", os.environ.get("GH_TOKEN", ""))
 MAX_REPO_TREE_ITEMS = int(os.environ.get("MAX_REPO_TREE_ITEMS", "10000"))
 
@@ -105,9 +109,20 @@ if MOCK_BACKEND:
     sqs = None
     table = None
 else:
-    dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
-    sqs = boto3.client("sqs", region_name=AWS_REGION)
+    _aws_kwargs = {"region_name": AWS_REGION}
+    if AWS_ENDPOINT_URL:
+        _aws_kwargs["endpoint_url"] = AWS_ENDPOINT_URL
+
+    dynamodb = boto3.resource("dynamodb", **_aws_kwargs)
+    sqs = boto3.client("sqs", **_aws_kwargs)
     table = dynamodb.Table(RUNS_TABLE)
+
+    if not AGENT_QUEUE_URL and AGENT_QUEUE_NAME:
+        AGENT_QUEUE_URL = sqs.get_queue_url(QueueName=AGENT_QUEUE_NAME)["QueueUrl"]
+    if not COGNEE_QUEUE_URL and COGNEE_QUEUE_NAME:
+        COGNEE_QUEUE_URL = sqs.get_queue_url(QueueName=COGNEE_QUEUE_NAME)["QueueUrl"]
+    if not DEBUG_QUEUE_URL and DEBUG_QUEUE_NAME:
+        DEBUG_QUEUE_URL = sqs.get_queue_url(QueueName=DEBUG_QUEUE_NAME)["QueueUrl"]
 
 app = FastAPI(title="Cognimoss Agent Platform")
 
@@ -688,7 +703,7 @@ def coding_agent_sidebar(active_href: str, main_body: str) -> str:
 def health() -> dict[str, Any]:
     response: dict[str, Any] = {
         "status": "ok",
-        "mode": "mock" if MOCK_BACKEND else "aws",
+        "mode": "mock" if MOCK_BACKEND else APP_MODE,
         "mock_backend": MOCK_BACKEND,
     }
     if MOCK_BACKEND:
@@ -2640,12 +2655,45 @@ def create_debug_run(req: DebugRunRequest, request: Request) -> dict[str, Any]:
 
 @app.get("/api/debug/runs/{debug_run_id}")
 def get_debug_run(debug_run_id: str) -> dict[str, Any]:
-    if not MOCK_BACKEND:
-        raise HTTPException(status_code=404, detail="Debug status endpoint is only available in mock mode.")
-    result = mock_backend.get_debug_run(debug_run_id)
-    if not result:
+    if MOCK_BACKEND:
+        result = mock_backend.get_debug_run(debug_run_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Debug run not found.")
+        return result
+
+    meta = table.get_item(Key={"pk": f"DEBUG_RUN#{debug_run_id}", "sk": "META"}).get("Item")
+    if not meta:
         raise HTTPException(status_code=404, detail="Debug run not found.")
-    return result
+
+    resp = table.query(
+        KeyConditionExpression=Key("pk").eq(f"DEBUG_RUN#{debug_run_id}") & Key("sk").begins_with("EVENT#")
+    )
+    events = resp.get("Items", [])
+    events.sort(key=lambda item: str(item.get("sk") or ""))
+
+    return {
+        "debug_run_id": debug_run_id,
+        "repo": meta.get("repo", ""),
+        "ref": meta.get("ref", "main"),
+        "cognee_scope_hash": meta.get("cognee_scope_hash", ""),
+        "status": meta.get("status", "unknown"),
+        "summary": meta.get("status_message", ""),
+        "created_at": int(meta.get("created_at", 0)),
+        "updated_at": int(meta.get("updated_at", 0)),
+        "suite_count": int(meta.get("suite_count", 0)),
+        "failed_suite_count": int(meta.get("failed_suite_count", 0)),
+        "issue_urls": meta.get("issue_urls", []),
+        "events": [
+            {
+                "ts": int(event.get("ts", 0)),
+                "event_type": event.get("event_type"),
+                "message": event.get("message"),
+                "payload": event.get("payload", {}),
+            }
+            for event in events
+        ],
+        "mock": False,
+    }
 
 
 @app.post("/api/runs")

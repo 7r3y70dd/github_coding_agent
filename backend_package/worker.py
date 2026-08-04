@@ -25,7 +25,9 @@ from platform_lock import global_task_lock
 
 
 AWS_REGION = os.environ.get("AWS_REGION", os.environ.get("BEDROCK_REGION", "us-east-1"))
-AGENT_QUEUE_URL = os.environ["AGENT_QUEUE_URL"]
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "").strip() or None
+AGENT_QUEUE_URL = os.environ.get("AGENT_QUEUE_URL", "").strip()
+AGENT_QUEUE_NAME = os.environ.get("AGENT_QUEUE_NAME", "").strip()
 RUNS_TABLE = os.environ.get("RUNS_TABLE", "agent_runs")
 
 SKIP_COGNEE_PRESEED = os.environ.get("SKIP_COGNEE_PRESEED", "1") == "1"
@@ -98,9 +100,18 @@ PROJECT_ALLOWLIST = tuple(
 
 EVENT_LOG = os.environ.get("EVENT_LOG", os.path.join(WORKDIR, "agent-events.jsonl"))
 
-sqs = boto3.client("sqs", region_name=AWS_REGION)
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+_aws_kwargs = {"region_name": AWS_REGION}
+if AWS_ENDPOINT_URL:
+    _aws_kwargs["endpoint_url"] = AWS_ENDPOINT_URL
+
+sqs = boto3.client("sqs", **_aws_kwargs)
+dynamodb = boto3.resource("dynamodb", **_aws_kwargs)
 runs_table = dynamodb.Table(RUNS_TABLE)
+
+if not AGENT_QUEUE_URL and AGENT_QUEUE_NAME:
+    AGENT_QUEUE_URL = sqs.get_queue_url(QueueName=AGENT_QUEUE_NAME)["QueueUrl"]
+if not AGENT_QUEUE_URL:
+    raise RuntimeError("Set AGENT_QUEUE_URL, or set AGENT_QUEUE_NAME so the queue URL can be resolved.")
 
 
 def now_ms() -> int:
