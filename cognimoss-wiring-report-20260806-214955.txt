@@ -1,0 +1,1538 @@
+
+
+================================================================
+== Cognimoss local wiring diagnostic
+================================================================
+Started:       2026-08-06T21:49:55-07:00
+User:          uid=1000(agent) gid=100(users) groups=100(users),1(wheel),57(networkmanager),131(docker)
+Host:          cognimoss-dev
+Repo:          /home/agent/projects/github_coding_agent
+Compose file:  docker-compose.local.yml
+Env file:      .env.local
+Report:        /home/agent/projects/github_coding_agent/cognimoss-wiring-report-20260806-214955.txt
+
+
+================================================================
+== Host and repository
+================================================================
+
+$ uname -a
+Linux cognimoss-dev 6.18.41 #1-NixOS SMP PREEMPT_DYNAMIC Thu Jul 30 11:05:57 UTC 2026 x86_64 GNU/Linux
+[exit=0]
+
+$ bash -c test\ -r\ /etc/os-release\ \&\&\ cat\ /etc/os-release\ \|\|\ true
+ANSI_COLOR="0;38;2;126;186;228"
+BUG_REPORT_URL="https://github.com/NixOS/nixpkgs/issues"
+BUILD_ID="26.05.6815.531670d871c0"
+CPE_NAME="cpe:/o:nixos:nixos:26.05"
+DEFAULT_HOSTNAME=nixos
+DOCUMENTATION_URL="https://nixos.org/learn.html"
+HOME_URL="https://nixos.org/"
+ID=nixos
+ID_LIKE=""
+IMAGE_ID=""
+IMAGE_VERSION=""
+LOGO="nix-snowflake"
+NAME=NixOS
+PRETTY_NAME="NixOS 26.05 (Yarara)"
+SUPPORT_END="2026-12-31"
+SUPPORT_URL="https://nixos.org/community.html"
+VARIANT=""
+VARIANT_ID=""
+VENDOR_NAME=NixOS
+VENDOR_URL="https://nixos.org/"
+VERSION="26.05 (Yarara)"
+VERSION_CODENAME=yarara
+VERSION_ID="26.05"
+[exit=0]
+
+$ docker --version
+Docker version 29.6.2, build v29.6.2
+[exit=0]
+
+$ docker compose version
+Docker Compose version 5.3.1
+[exit=0]
+
+---- Git state ----
+
+$ git status --short --branch
+## main...origin/main
+ M docker-compose.local.yml
+ M scripts/recreate.sh
+ M scripts/verify-ollama.sh
+?? cognimoss-wiring-report-20260806-214955.txt
+?? scripts/cognimoss-wiring-report-20260806-163807.txt
+?? scripts/wire-check.sh
+[exit=0]
+
+$ git log -1 --date=iso --format=commit=%H%ncommit_date=%ad%nsubject=%s
+commit=42fca8c12c9f30e370ea3c3d24baf29542a88106
+commit_date=2026-08-06 21:45:33 -0700
+subject=remove log
+[exit=0]
+
+---- Relevant environment values ----
+AWS_REGION=us-east-1
+AWS_DEFAULT_REGION=us-east-1
+AWS_ENDPOINT_URL=http://moto:5000
+OLLAMA_URL=http://host.docker.internal:11434
+LLM_ENDPOINT=http://host.docker.internal:11434/v1
+EMBEDDING_ENDPOINT=http://host.docker.internal:11434/api/embed
+
+
+================================================================
+== Compose configuration and state
+================================================================
+
+---- Configuration validation ----
+[PASS] Compose configuration parses
+
+---- Services ----
+
+$ docker compose --env-file .env.local -f docker-compose.local.yml config --services
+moto
+local-init
+ollama-check
+frontend
+agent-worker
+cognee-indexer
+debug-worker
+[exit=0]
+
+---- Images ----
+
+$ docker compose --env-file .env.local -f docker-compose.local.yml config --images
+cognimoss-local-cognee-indexer
+cognimoss-local-debug-worker
+motoserver/moto:5.1.20
+cognimoss-local-local-init
+curlimages/curl:8.12.1
+cognimoss-local-frontend
+cognimoss-local-agent-worker
+[exit=0]
+
+---- Container state ----
+
+$ docker compose --env-file .env.local -f docker-compose.local.yml ps -a
+NAME                               IMAGE                            COMMAND                  SERVICE          CREATED       STATUS                   PORTS
+cognimoss-local-agent-worker-1     cognimoss-local-agent-worker     "python worker.py"       agent-worker     4 hours ago   Up 19 seconds            
+cognimoss-local-cognee-indexer-1   cognimoss-local-cognee-indexer   "python cognee_index…"   cognee-indexer   4 hours ago   Up 4 hours               
+cognimoss-local-debug-worker-1     cognimoss-local-debug-worker     "python debug_worker…"   debug-worker     4 hours ago   Up 4 hours               
+cognimoss-local-frontend-1         cognimoss-local-frontend         "uvicorn app:app --h…"   frontend         4 hours ago   Up 4 hours               127.0.0.1:8000->8000/tcp
+cognimoss-local-local-init-1       cognimoss-local-local-init       "python /scripts/ini…"   local-init       4 hours ago   Exited (0) 4 hours ago   
+cognimoss-local-moto-1             motoserver/moto:5.1.20           "/usr/local/bin/moto…"   moto             5 hours ago   Up 4 hours (healthy)     127.0.0.1:5000->5000/tcp
+cognimoss-local-ollama-check-1     curlimages/curl:8.12.1           "/bin/sh -ec i=0 unt…"   ollama-check     5 hours ago   Exited (0) 4 hours ago   
+[exit=0]
+
+---- Compose projects ----
+
+$ docker compose ls
+NAME                STATUS              CONFIG FILES
+cognimoss-local     running(5)          /home/agent/projects/github_coding_agent/docker-compose.local.yml
+[exit=0]
+
+
+================================================================
+== Docker network wiring
+================================================================
+Reference container: 9d2b5af569bb88ec08bf1e27fed48ef283e7a30f0371afb8f79872b311c5f98f
+Compose network:     cognimoss-local_default
+Network ID:          e325f3ee75f674e43e8e0e167329f2a9cde19668f7aab659a18b8b239c37a398
+Bridge interface:    br-cognimoss
+Network subnet:      172.18.0.0/16
+Network gateway:     172.18.0.1
+
+$ docker network inspect cognimoss-local_default
+[
+    {
+        "Name": "cognimoss-local_default",
+        "Id": "e325f3ee75f674e43e8e0e167329f2a9cde19668f7aab659a18b8b239c37a398",
+        "Created": "2026-08-06T17:19:23.706159077-07:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv4": true,
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Options": {
+            "com.docker.network.bridge.name": "br-cognimoss"
+        },
+        "Labels": {
+            "com.docker.compose.config-hash": "64c0f825a6f3c5d2b64d27a0687a55a993fe6ebbf31d80135c61bc278cf15012",
+            "com.docker.compose.network": "default",
+            "com.docker.compose.project": "cognimoss-local",
+            "com.docker.compose.version": "5.3.1"
+        },
+        "Containers": {
+            "8cd6ea719c228229616fc2e5698c2d2f583e6484938d9b3aa8bb7caf2a6bdfe5": {
+                "Name": "cognimoss-local-cognee-indexer-1",
+                "EndpointID": "7350ef7b259f5bb2485199d2b96f83f534e8ae40f71d0f0cff283c6ea68781c6",
+                "MacAddress": "76:1a:96:e9:42:e0",
+                "IPv4Address": "172.18.0.6/16",
+                "IPv6Address": ""
+            },
+            "969253f05d96c7c766c2c76a3e3fc7fb4bdc96b02e082d9bfe502fa9eef2ead4": {
+                "Name": "cognimoss-local-frontend-1",
+                "EndpointID": "24d9d08ab1cad743bc9e0fdb53f84063fae86f28fcb087434eb734bd63239626",
+                "MacAddress": "76:79:cc:0b:f6:78",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            },
+            "9d2b5af569bb88ec08bf1e27fed48ef283e7a30f0371afb8f79872b311c5f98f": {
+                "Name": "cognimoss-local-moto-1",
+                "EndpointID": "d31733a628e465ff270feb6b056d03934010278ed484de9b3928fe8429a21eff",
+                "MacAddress": "a6:2e:2b:09:35:83",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            },
+            "ab6274478f9729bf2daaa14d30f4fac835ee0a33293267908788bb243b925f5c": {
+                "Name": "cognimoss-local-agent-worker-1",
+                "EndpointID": "e2e5f0f4bd00a7878b57aafeee016db3a4eabb677b2108dd4186d28bcc760e35",
+                "MacAddress": "22:ca:26:31:81:9c",
+                "IPv4Address": "172.18.0.4/16",
+                "IPv6Address": ""
+            },
+            "ce02b2e2fdf905aecd1e16cdc2fd9fe2026dcc5ab1d6f403651d7247edcfe0cb": {
+                "Name": "cognimoss-local-debug-worker-1",
+                "EndpointID": "81b9500d57846a5e88e7a04de33eae889f72e1992f895767cf26e998d7c174ca",
+                "MacAddress": "3a:d6:94:83:a4:b9",
+                "IPv4Address": "172.18.0.5/16",
+                "IPv6Address": ""
+            }
+        },
+        "Status": {
+            "IPAM": {
+                "Subnets": {
+                    "172.18.0.0/16": {
+                        "IPsInUse": 8,
+                        "DynamicIPsAvailable": 65528
+                    }
+                }
+            }
+        }
+    }
+]
+[exit=0]
+
+---- Host interfaces and routes ----
+
+$ ip -br address
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp2s0           DOWN           
+wlo1             UP             192.168.86.53/24 fdef:a703:33f4:5387:c8c2:55b5:572c:f5f6/64 fdef:a703:33f4:5387:c834:98cc:357:ef7e/64 fe80::f3f4:4272:dfbc:7057/64 
+br-cognimoss     UP             172.18.0.1/16 fe80::b83e:fcff:fe7c:5bb9/64 
+docker0          DOWN           172.17.0.1/16 
+veth98582c0@if2  UP             fe80::4c58:99ff:fede:ed5d/64 
+vethea30ebf@if2  UP             fe80::c8fc:87ff:fe53:3e82/64 
+vethe19a0e0@if2  UP             fe80::dc9a:41ff:fe14:9573/64 
+veth3ff1dd6@if2  UP             fe80::f0e3:86ff:fe4d:1c30/64 
+veth6904555@if2  UP             fe80::c431:8fff:fe8a:f77b/64 
+[exit=0]
+
+$ ip route show
+default via 192.168.86.1 dev wlo1 proto dhcp src 192.168.86.53 metric 600 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 linkdown 
+172.18.0.0/16 dev br-cognimoss proto kernel scope link src 172.18.0.1 
+192.168.86.0/24 dev wlo1 proto kernel scope link src 192.168.86.53 metric 600 
+[exit=0]
+[PASS] Host bridge interface exists: br-cognimoss
+
+$ ip -details address show dev br-cognimoss
+4: br-cognimoss: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether ba:3e:fc:7c:5b:b9 brd ff:ff:ff:ff:ff:ff promiscuity 0 allmulti 0 minmtu 68 maxmtu 65535 netns-immutable 
+    bridge forward_delay 1500 hello_time 200 max_age 2000 ageing_time 30000 stp_state 0 priority 32768 vlan_filtering 0 vlan_protocol 802.1Q bridge_id 8000.ba:3e:fc:7c:5b:b9 designated_root 8000.ba:3e:fc:7c:5b:b9 root_port 0 root_path_cost 0 topology_change 0 topology_change_detected 0 hello_timer    0.00 tcn_timer    0.00 topology_change_timer    0.00 gc_timer   66.62 fdb_n_learned 5 fdb_max_learned 0 vlan_default_pvid 1 vlan_stats_enabled 0 vlan_stats_per_port 0 group_fwd_mask 0 group_address 01:80:c2:00:00:00 mcast_snooping 1 no_linklocal_learn 0 mcast_vlan_snooping 0 mst_enabled 0 mdb_offload_fail_notification 0 fdb_local_vlan_0 0 mcast_router 1 mcast_query_use_ifaddr 0 mcast_querier 0 mcast_hash_elasticity 16 mcast_hash_max 4096 mcast_last_member_count 2 mcast_startup_query_count 2 mcast_last_member_interval 100 mcast_membership_interval 26000 mcast_querier_interval 25500 mcast_query_interval 12500 mcast_query_response_interval 1000 mcast_startup_query_interval 3125 mcast_stats_enabled 0 mcast_igmp_version 2 mcast_mld_version 1 nf_call_iptables 0 nf_call_ip6tables 0 nf_call_arptables 0 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 524280 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 
+    inet 172.18.0.1/16 brd 172.18.255.255 scope global br-cognimoss
+       valid_lft forever preferred_lft forever
+    inet6 fe80::b83e:fcff:fe7c:5bb9/64 scope link proto kernel_ll 
+       valid_lft forever preferred_lft forever
+[exit=0]
+
+---- Docker daemon facts ----
+
+$ docker info --format Server=\{\{.ServerVersion\}\}\ Rootless=\{\{json\ .SecurityOptions\}\}\ Driver=\{\{.Driver\}\}
+Server=29.6.2 Rootless=["name=seccomp,profile=builtin","name=cgroupns"] Driver=overlayfs
+[exit=0]
+/etc/docker/daemon.json is absent or unreadable
+
+
+================================================================
+== Ollama host service
+================================================================
+
+$ systemctl is-active ollama
+failed
+[exit=3]
+
+$ systemctl show ollama -p ActiveState -p SubState -p MainPID -p ExecMainStatus --no-pager
+ActiveState=failed
+SubState=failed
+MainPID=0
+ExecMainStatus=0
+[exit=0]
+
+$ journalctl -u ollama --no-pager -n 100
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: file type   = Q4_K - Medium
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: file size   = 39.59 GiB (4.82 BPW)
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load: 0 unused tokens
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load: printing all EOG tokens:
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load:   - 128001 ('<｜end▁of▁sentence｜>')
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load:   - 128008 ('<|eom_id|>')
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load:   - 128009 ('<|eot_id|>')
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load: special tokens cache size = 256
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load: token to piece cache size = 0.7999 MB
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: arch                  = llama
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: vocab_only            = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: no_alloc              = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_ctx_train           = 131072
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd_inp            = 8192
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd                = 8192
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd_out            = 8192
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_layer               = 80
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_layer_all           = 80
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_head                = 64
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_head_kv             = 8
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_rot                 = 128
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_swa                 = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: is_swa_any            = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd_head_k         = 128
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd_head_v         = 128
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_gqa                 = 8
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd_k_gqa          = 1024
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_embd_v_gqa          = 1024
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_norm_eps            = 0.0e+00
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_norm_rms_eps        = 1.0e-05
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_clamp_kqv           = 0.0e+00
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_max_alibi_bias      = 0.0e+00
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_logit_scale         = 0.0e+00
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_attn_scale          = 0.0e+00
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: f_attn_value_scale    = 0.0000
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_ff                  = 28672
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_expert              = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_expert_used         = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_expert_groups       = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_group_used          = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: causal attn           = 1
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: pooling type          = -1
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: rope type             = 0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: rope scaling          = linear
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: freq_base_train       = 500000.0
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: freq_scale_train      = 1
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_ctx_orig_yarn       = 131072
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: rope_yarn_log_mul     = 0.0000
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: rope_finetuned        = unknown
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: model type            = 70B
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: model params          = 70.55 B
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: general.name          = DeepSeek R1 Distill Llama 70B
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: vocab type            = BPE
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_vocab               = 128256
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: n_merges              = 280147
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: BOS token             = 128000 '<｜begin▁of▁sentence｜>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: EOS token             = 128009 '<|eot_id|>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: EOT token             = 128009 '<|eot_id|>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: EOM token             = 128008 '<|eom_id|>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: PAD token             = 128001 '<｜end▁of▁sentence｜>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: LF token              = 198 'Ċ'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: EOG token             = 128001 '<｜end▁of▁sentence｜>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: EOG token             = 128008 '<|eom_id|>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: EOG token             = 128009 '<|eot_id|>'
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: print_info: max token length      = 256
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load_tensors: loading model tensors, this can take a while... (mmap = false, direct_io = false)
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load_tensors:          CPU model buffer size =  9223.11 MiB
+Aug 06 20:23:08 cognimoss-dev ollama[1170]: load_tensors:   CPU_REPACK model buffer size = 31320.00 MiB
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: cmn  common_init_: added <｜end▁of▁sentence｜> logit bias = -inf
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: cmn  common_init_: added <|eom_id|> logit bias = -inf
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: cmn  common_init_: added <|eot_id|> logit bias = -inf
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: constructing llama_context
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_seq_max     = 1
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_ctx         = 16384
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_ctx_seq     = 16384
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_batch       = 1024
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_ubatch      = 1024
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: causal_attn   = 1
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: flash_attn    = auto
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: kv_unified    = false
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: freq_base     = 500000.0
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: freq_scale    = 1
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_rs_seq      = 0
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_outputs_max = 1
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context: n_ctx_seq (16384) < n_ctx_train (131072) -- the full capacity of the model will not be utilized
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_context:        CPU  output buffer size =     0.49 MiB
+Aug 06 20:24:11 cognimoss-dev ollama[1170]: llama_kv_cache:        CPU KV buffer size =  5120.00 MiB
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: srv    operator(): operator(): cleaning up before exit...
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: srv    operator(): operator(): cleaning up before exit...
+Aug 06 20:24:17 cognimoss-dev systemd[1]: ollama.service: The kernel OOM killer killed some processes in this unit.
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: common_memory_breakdown_print: | memory breakdown [MiB] | total   free    self   model   context   compute    unaccounted |
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: common_memory_breakdown_print: |   - Host               |                  358 =   260 +       0 +      98                |
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: common_memory_breakdown_print: | memory breakdown [MiB] | total   free    self   model   context   compute    unaccounted |
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: common_memory_breakdown_print: |   - Host               |                 4092 =  3459 +     414 +     219                |
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: common_memory_breakdown_print: |   - CPU_REPACK         |                 9682 =  9682 +       0 +       0                |
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: time=2026-08-06T20:24:17.110-07:00 level=INFO source=llama_server.go:1312 msg="waiting for llama-server to become available" status="llm server not responding"
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: time=2026-08-06T20:24:17.365-07:00 level=WARN source=llama_server.go:1263 msg="client connection closed before llama-server finished loading, aborting load"
+Aug 06 20:24:17 cognimoss-dev ollama[1170]: time=2026-08-06T20:24:17.367-07:00 level=INFO source=sched.go:651 msg="Load failed" model=/var/lib/ollama/models/blobs/sha256-4cd576d9aa16961244012223abf01445567b061f1814b57dfef699e4cf8df339 error="timed out waiting for llama-server to start: context canceled"
+Aug 06 20:24:20 cognimoss-dev systemd[1]: ollama.service: Failed with result 'oom-kill'.
+Aug 06 20:24:20 cognimoss-dev systemd[1]: ollama.service: Consumed 2h 28min 25.901s CPU time over 46min 15.428s wall clock time, 58.2G memory peak, 140.1G read from disk, 1.1G written to disk, 630.3M incoming IP traffic, 10.7M outgoing IP traffic.
+[exit=0]
+
+---- Listening sockets ----
+
+$ ss -ltnp 2>/dev/null | grep -E 'State|:11434\b' || true
+State  Recv-Q Send-Q Local Address:Port Peer Address:PortProcess
+[exit=0]
+
+---- Host -> Ollama API ----
+[FAIL] Host cannot reach http://127.0.0.1:11434/api/tags
+curl: (7) Failed to connect to 127.0.0.1:11434 after 0 ms: Could not connect to server
+
+
+================================================================
+== Exact ollama-check service environment
+================================================================
+[WARN] No existing ollama-check container; transient probes will still run
+
+---- Environment, hosts, DNS, and route inside ollama-check ----
+ Container cognimoss-local-ollama-check-run-e356c5d3fc8e Creating 
+ Container cognimoss-local-ollama-check-run-e356c5d3fc8e Created 
+EMBEDDING_ENDPOINT=http://host.docker.internal:11434/api/embed
+LLM_ENDPOINT=http://host.docker.internal:11434/v1
+OLLAMA_URL=http://host.docker.internal:11434
+
+/etc/hosts:
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::	ip6-localnet
+ff00::	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.1	host.docker.internal
+172.18.0.7	e9b2c99fe7eb
+
+/etc/resolv.conf:
+# Generated by Docker Engine.
+# This file can be edited; Docker Engine will not make further changes once it
+# has been modified.
+
+nameserver 127.0.0.11
+search lan
+options edns0 ndots:0
+
+# Based on host file: '/etc/resolv.conf' (internal resolver)
+# ExtServers: [host(192.168.86.1)]
+# Overrides: []
+# Option ndots from: internal
+
+/proc/net/route:
+Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
+eth0	00000000	010012AC	0003	0	0	0	00000000	0	0	0                                                                               
+eth0	000012AC	00000000	0001	0	0	0	0000FFFF	0	0	0                                                                               
+
+---- ollama-check -> configured OLLAMA_URL ----
+ Container cognimoss-local-ollama-check-run-69e610502ada Creating 
+ Container cognimoss-local-ollama-check-run-69e610502ada Created 
+OLLAMA_URL=http://host.docker.internal:11434
+Testing: http://host.docker.internal:11434/api/tags
+* Host host.docker.internal:11434 was resolved.
+* IPv6: (none)
+* IPv4: 172.17.0.1
+*   Trying 172.17.0.1:11434...
+* connect to 172.17.0.1 port 11434 from 172.18.0.7 port 39650 failed: Connection refused
+* Failed to connect to host.docker.internal port 11434 after 0 ms: Could not connect to server
+* closing connection #0
+
+curl_exit=7
+
+[FAIL] ollama-check cannot reach its configured OLLAMA_URL
+
+---- ollama-check -> host.docker.internal:11434 ----
+ Container cognimoss-local-ollama-check-run-a4fca739ccd3 Creating 
+ Container cognimoss-local-ollama-check-run-a4fca739ccd3 Created 
+host mapping:
+172.17.0.1	host.docker.internal
+
+* Host host.docker.internal:11434 was resolved.
+* IPv6: (none)
+* IPv4: 172.17.0.1
+*   Trying 172.17.0.1:11434...
+* connect to 172.17.0.1 port 11434 from 172.18.0.7 port 39652 failed: Connection refused
+* Failed to connect to host.docker.internal port 11434 after 0 ms: Could not connect to server
+* closing connection #0
+
+curl_exit=7
+
+[FAIL] Compose container cannot reach host.docker.internal:11434
+
+---- ollama-check -> direct Compose gateway 172.18.0.1:11434 ----
+ Container cognimoss-local-ollama-check-run-37c9645da710 Creating 
+ Container cognimoss-local-ollama-check-run-37c9645da710 Created 
+Gateway: 172.18.0.1
+*   Trying 172.18.0.1:11434...
+* connect to 172.18.0.1 port 11434 from 172.18.0.7 port 47376 failed: Connection refused
+* Failed to connect to 172.18.0.1 port 11434 after 0 ms: Could not connect to server
+* closing connection #0
+
+curl_exit=7
+
+[FAIL] Compose container cannot reach direct gateway 172.18.0.1:11434
+
+
+================================================================
+== Moto and local-init wiring
+================================================================
+
+---- Moto container state ----
+
+$ docker inspect 9d2b5af569bb88ec08bf1e27fed48ef283e7a30f0371afb8f79872b311c5f98f --format name=\{\{.Name\}\}\ status=\{\{.State.Status\}\}\ health=\{\{if\ .State.Health\}\}\{\{.State.Health.Status\}\}\{\{else\}\}none\{\{end\}\}\ networks=\{\{json\ .NetworkSettings.Networks\}\}
+name=/cognimoss-local-moto-1 status=running health=healthy networks={"cognimoss-local_default":{"IPAMConfig":null,"Links":null,"Aliases":["cognimoss-local-moto-1","moto"],"DriverOpts":null,"GwPriority":0,"NetworkID":"e325f3ee75f674e43e8e0e167329f2a9cde19668f7aab659a18b8b239c37a398","EndpointID":"d31733a628e465ff270feb6b056d03934010278ed484de9b3928fe8429a21eff","Gateway":"172.18.0.1","IPAddress":"172.18.0.2","MacAddress":"a6:2e:2b:09:35:83","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"DNSNames":["cognimoss-local-moto-1","moto","9d2b5af569bb"]}}
+[exit=0]
+
+---- Moto logs ----
+
+$ docker compose --env-file .env.local -f docker-compose.local.yml logs --no-color --tail=100 moto
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:15] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:17] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:18] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:19] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:19] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:20] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:21] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:23] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:24] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:26] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:27] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:29] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:29] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:29] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:30] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:32] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:33] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:35] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:36] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:48:36] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:48:36] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:39] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:39] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:39] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:42] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:42] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:45] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:45] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:48] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:48] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:49] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:49] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:51] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:51] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:54] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:54] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:57] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:58] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:48:58] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:48:58] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:00] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:01] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:03] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:04] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:06] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:07] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:09] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:09] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:09] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:10] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:12] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:13] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:15] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:16] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:18] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:19] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:19] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:20] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:49:20] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:49:20] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:21] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:23] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:24] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:26] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:27] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:29] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:29] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:29] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:30] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:32] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:33] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.4 - - [07/Aug/2026 04:49:35] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:35] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:36] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:38] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.4 - - [07/Aug/2026 04:49:41] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:42] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:49:42] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:49:42] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:42] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:45] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:45] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:48] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:48] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:49] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:49] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:51] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:51] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:54] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:54] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:57] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:57] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:59] "POST / HTTP/1.1" 200 -
+[exit=0]
+
+---- Host -> published Moto endpoint ----
+[PASS] Host can reach Moto at 127.0.0.1:5000
+
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+
+<head>
+  <!-- Meta tags for charset, IE compatibility, and responsive design -->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Page title displayed in browser tab -->
+  <title>Moto</title>
+
+  <!-- Bootstrap 5 CSS for responsive design and UI components -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/boot
+
+---- local-init -> moto DNS, TCP, and HTTP ----
+ Container cognimoss-local-local-init-run-b970f75a2fef Creating 
+ Container cognimoss-local-local-init-run-b970f75a2fef Created 
+AWS_ENDPOINT_URL = http://moto:5000
+proxy variables:
+  HTTP_PROXY=None
+  HTTPS_PROXY=None
+  ALL_PROXY=None
+  NO_PROXY=None
+  http_proxy=None
+  https_proxy=None
+  all_proxy=None
+  no_proxy=None
+DNS: [(<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_STREAM: 1>, 6, '', ('172.18.0.2', 5000))]
+TCP: OK
+HTTP: 200 OK
+BODY: b'\n<!DOCTYPE html>\n<html lang="en" data-bs-theme="light">\n\n<head>\n  <!-- Meta tags for charset, IE compatibility, and responsive design -->\n  <meta charset="utf-8">\n  <meta http-equiv="X-UA-Compatible" content="IE=edge">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n\n  <!-- Page title displayed in browser tab -->\n  <title>Moto</title>\n\n  <!-- Bootstrap 5 CSS for responsive design and UI components -->\n  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/boot'
+[PASS] local-init can resolve and reach moto:5000
+
+---- Boto3 STS -> Moto with explicit local credentials ----
+ Container cognimoss-local-local-init-run-9e9cc15b19bc Creating 
+ Container cognimoss-local-local-init-run-9e9cc15b19bc Created 
+endpoint = http://moto:5000
+region   = us-east-1
+{'UserId': 'AKIAIOSFODNN7EXAMPLE', 'Account': '123456789012', 'Arn': 'arn:aws:sts::123456789012:user/moto', 'ResponseMetadata': {'RequestId': 'QQmeTddFt3H1gKQKNCYNMK0jnRZIDUOzKkDJbyUOYtZo1G1tf291', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Werkzeug/3.1.5 Python/3.13.11, amazon.com', 'date': 'Fri, 07 Aug 2026 04:50:02 GMT', 'content-type': 'text/xml', 'x-amzn-requestid': 'QQmeTddFt3H1gKQKNCYNMK0jnRZIDUOzKkDJbyUOYtZo1G1tf291', 'content-length': '382', 'access-control-allow-origin': '*', 'connection': 'close'}, 'RetryAttempts': 0}}
+[PASS] Boto3 STS can reach Moto
+
+
+================================================================
+== Firewall and packet-filter evidence
+================================================================
+Expected Nix config: /home/agent/projects/nix_dev/configs/agent_config.nix
+[WARN] Cannot read /home/agent/projects/nix_dev/configs/agent_config.nix
+[WARN] No cached sudo authorization. Run 'sudo -v' before this script to capture firewall rules.
+
+
+================================================================
+== Recent service logs
+================================================================
+
+---- moto ----
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:36] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:38] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:38] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:38] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:39] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:41] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:42] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:44] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:45] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:46:46] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:46:46] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:47] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:48] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:48] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:49] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:50] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:52] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:53] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:55] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:56] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:46:58] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:58] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:58] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:46:59] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:01] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:02] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:04] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:05] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:07] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:47:08] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:47:08] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:08] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:08] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:08] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:11] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:11] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:14] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:14] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:17] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:17] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:18] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:18] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:20] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:20] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:23] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:23] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:26] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:26] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:28] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:28] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:29] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:29] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:47:30] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:47:30] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:32] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:33] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:35] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:36] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:38] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:38] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:38] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:39] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:41] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:42] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:44] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:45] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:48] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:48] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:48] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:48] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:51] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:51] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:47:52] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:47:52] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:54] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:55] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:57] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:47:58] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:47:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:00] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:01] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:03] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:04] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:06] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:07] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:09] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:09] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:09] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:10] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:12] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:13] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:48:14] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:48:14] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:15] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:17] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:18] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:19] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:19] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:20] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:21] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:23] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:24] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:26] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:27] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:29] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:29] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:29] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:30] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:32] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:33] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:35] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:36] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:48:36] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:48:36] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:39] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:39] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:39] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:42] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:42] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:45] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:45] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:48] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:48] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:49] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:49] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:51] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:51] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:54] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:54] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:57] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:48:58] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:48:58] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:48:58] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:48:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:00] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:01] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:03] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:04] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:06] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:07] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:09] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:09] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:09] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:10] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:12] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:13] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:15] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:16] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:18] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:19] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:19] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:20] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:49:20] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:49:20] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:21] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:23] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:24] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:26] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:27] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:29] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:29] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:29] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:30] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:32] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:33] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.4 - - [07/Aug/2026 04:49:35] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:35] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:36] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:38] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:39] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.4 - - [07/Aug/2026 04:49:41] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:42] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.5 - - [07/Aug/2026 04:49:42] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.6 - - [07/Aug/2026 04:49:42] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:42] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:45] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:45] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:48] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:48] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:49] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:49] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:51] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:51] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:54] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:54] "POST / HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:49:57] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:57] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:49:59] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.1 - - [07/Aug/2026 04:50:00] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 127.0.0.1 - - [07/Aug/2026 04:50:00] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.7 - - [07/Aug/2026 04:50:01] "GET /moto-api/ HTTP/1.1" 200 -
+moto-1  | 172.18.0.3 - - [07/Aug/2026 04:50:01] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.4 - - [07/Aug/2026 04:50:02] "POST / HTTP/1.1" 200 -
+moto-1  | 172.18.0.7 - - [07/Aug/2026 04:50:02] "POST / HTTP/1.1" 200 -
+
+---- local-init ----
+local-init-1  | queue cognimoss-agent-runs: http://moto:5000/123456789012/cognimoss-agent-runs
+local-init-1  | queue cognimoss-cognee-index: http://moto:5000/123456789012/cognimoss-cognee-index
+local-init-1  | queue cognimoss-debug-runs: http://moto:5000/123456789012/cognimoss-debug-runs
+local-init-1  | table agent_runs: created
+local-init-1  | bucket cognimoss-local-chat-context: created
+local-init-1  | Local AWS resources are ready.
+
+---- ollama-check ----
+
+---- frontend ----
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:36696 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:39300 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:58196 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:56114 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:35070 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47490 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:39556 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:33414 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:42344 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:48518 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:44910 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:56676 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:55178 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:43666 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:60456 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:56276 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:44144 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47922 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:48294 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:53926 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:55684 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:40540 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:51074 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:43732 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:36798 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:57940 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:48220 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:50624 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:57238 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:45142 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:45598 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:59752 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47794 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:38584 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:52240 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:53074 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:45782 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:36378 - "GET /api/runs HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/runs?status=queued HTTP/1.1" 200 OK
+frontend-1  | INFO:     172.18.0.1:47054 - "GET /api/cognee/indexes?repo=7r3y70dd%2Fgame_project HTTP/1.1" 200 OK
+
+---- agent-worker ----
+agent-worker-1  | [31m│[0m [31m❱ [0m413 [2m│   │   │   │   │   [0m[94mraise[0m [1;4mretry_exc.reraise()[0m                          [31m│[0m
+agent-worker-1  | [31m│[0m   [2m414 [0m[2m│   │   │   │   [0m[94mraise[0m retry_exc [94mfrom[0m[90m [0m[4;96mfut[0m[4;96m.[0m[4;96mexception[0m()                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m415 [0m[2m│   │   │   [0m                                                           [31m│[0m
+agent-worker-1  | [31m│[0m   [2m416 [0m[2m│   │   │   [0m[96mself[0m._add_action_func(exc_check)                           [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/site-packages/tenacity/[0m[1m__init__.py[0m:184 in reraise  [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m181 [0m[2m│   [0m                                                                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m182 [0m[2m│   [0m[94mdef[0m[90m [0m[92mreraise[0m([96mself[0m) -> t.NoReturn:                                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m183 [0m[2m│   │   [0m[94mif[0m [96mself[0m.last_attempt.failed:                                   [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m184 [2m│   │   │   [0m[94mraise[0m [1;4;96mself[0m[1;4m.last_attempt.result()[0m                           [31m│[0m
+agent-worker-1  | [31m│[0m   [2m185 [0m[2m│   │   [0m[94mraise[0m [96mself[0m                                                     [31m│[0m
+agent-worker-1  | [31m│[0m   [2m186 [0m[2m│   [0m                                                                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m187 [0m[2m│   [0m[94mdef[0m[90m [0m[92m__str__[0m([96mself[0m) -> [96mstr[0m:                                          [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/concurrent/futures/[0m[1m_base.py[0m:449 in result          [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m446 [0m[2m│   │   │   │   [0m[94mif[0m [96mself[0m._state [95min[0m [CANCELLED, CANCELLED_AND_NOTIFIED]: [31m│[0m
+agent-worker-1  | [31m│[0m   [2m447 [0m[2m│   │   │   │   │   [0m[94mraise[0m CancelledError()                             [31m│[0m
+agent-worker-1  | [31m│[0m   [2m448 [0m[2m│   │   │   │   [0m[94melif[0m [96mself[0m._state == FINISHED:                          [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m449 [2m│   │   │   │   │   [0m[94mreturn[0m [96mself[0m.__get_result()                         [31m│[0m
+agent-worker-1  | [31m│[0m   [2m450 [0m[2m│   │   │   │   [0m                                                       [31m│[0m
+agent-worker-1  | [31m│[0m   [2m451 [0m[2m│   │   │   │   [0m[96mself[0m._condition.wait(timeout)                          [31m│[0m
+agent-worker-1  | [31m│[0m   [2m452 [0m                                                                       [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/concurrent/futures/[0m[1m_base.py[0m:401 in __get_result    [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m398 [0m[2m│   [0m[94mdef[0m[90m [0m[92m__get_result[0m([96mself[0m):                                            [31m│[0m
+agent-worker-1  | [31m│[0m   [2m399 [0m[2m│   │   [0m[94mif[0m [96mself[0m._exception:                                            [31m│[0m
+agent-worker-1  | [31m│[0m   [2m400 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m401 [2m│   │   │   │   [0m[94mraise[0m [96mself[0m._exception                                  [31m│[0m
+agent-worker-1  | [31m│[0m   [2m402 [0m[2m│   │   │   [0m[94mfinally[0m:                                                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m403 [0m[2m│   │   │   │   [0m[2m# Break a reference cycle with the exception in self._[0m [31m│[0m
+agent-worker-1  | [31m│[0m   [2m404 [0m[2m│   │   │   │   [0m[1;4;96mself[0m[1;4m = [0m[1;4;94mNone[0m                                            [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/site-packages/tenacity/asyncio/[0m[1m__init__.py[0m:116 in  [31m│[0m
+agent-worker-1  | [31m│[0m __call__                                                                     [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m113 [0m[2m│   │   │   [0m[94mif[0m [96misinstance[0m(do, DoAttempt):                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m114 [0m[2m│   │   │   │   [0m[94mtry[0m:                                                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m115 [0m[2m│   │   │   │   │   [0m[94mif[0m is_async:                                       [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m116 [2m│   │   │   │   │   │   [0mresult = [94mawait[0m fn(*args, **kwargs)             [31m│[0m
+agent-worker-1  | [31m│[0m   [2m117 [0m[2m│   │   │   │   │   [0m[94melse[0m:                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m118 [0m[2m│   │   │   │   │   │   [0mresult = fn(*args, **kwargs)                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m119 [0m[2m│   │   │   │   [0m[94mexcept[0m [96mBaseException[0m:  [2m# noqa: B902[0m                    [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/site-packages/cognee/infrastructure/llm/structured[0m [31m│[0m
+agent-worker-1  | [31m│[0m [2m_output_framework/litellm_instructor/llm/ollama/[0m[1madapter.py[0m:142 in            [31m│[0m
+agent-worker-1  | [31m│[0m acreate_structured_output                                                    [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m139 [0m[2m│   │   [0m                                                               [31m│[0m
+agent-worker-1  | [31m│[0m   [2m140 [0m[2m│   │   [0m[94mtry[0m:                                                           [31m│[0m
+agent-worker-1  | [31m│[0m   [2m141 [0m[2m│   │   │   [0m[94masync[0m [94mwith[0m llm_rate_limiter_context_manager():             [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m142 [2m│   │   │   │   [0mresponse = [94mawait[0m [96mself[0m.aclient.chat.completions.create( [31m│[0m
+agent-worker-1  | [31m│[0m   [2m143 [0m[2m│   │   │   │   │   [0mmodel=[96mself[0m.model,                                  [31m│[0m
+agent-worker-1  | [31m│[0m   [2m144 [0m[2m│   │   │   │   │   [0mmessages=[                                         [31m│[0m
+agent-worker-1  | [31m│[0m   [2m145 [0m[2m│   │   │   │   │   │   [0m{                                              [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/site-packages/instructor/core/[0m[1mclient.py[0m:649 in     [31m│[0m
+agent-worker-1  | [31m│[0m create                                                                       [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m646 [0m[2m│   │   │   │   [0m**kwargs,                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m647 [0m[2m│   │   │   [0m)                                                          [31m│[0m
+agent-worker-1  | [31m│[0m   [2m648 [0m[2m│   │   [0m                                                               [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m649 [2m│   │   [0m[94mreturn[0m [1;4;94mawait[0m[1;4m [0m[1;4;96mself[0m[1;4m.create_fn([0m                                   [31m│[0m
+agent-worker-1  | [31m│[0m   [2m650 [0m[2m│   │   │   [0m[1;4mresponse_model=response_model,[0m                             [31m│[0m
+agent-worker-1  | [31m│[0m   [2m651 [0m[2m│   │   │   [0m[1;4mvalidation_context=validation_context,[0m                     [31m│[0m
+agent-worker-1  | [31m│[0m   [2m652 [0m[2m│   │   │   [0m[1;4mcontext=context,[0m                                           [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/site-packages/instructor/core/[0m[1mpatch.py[0m:188 in      [31m│[0m
+agent-worker-1  | [31m│[0m new_create_async                                                             [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m185 [0m[2m│   │   │   [0m[94mif[0m obj [95mis[0m [95mnot[0m [94mNone[0m:                                        [31m│[0m
+agent-worker-1  | [31m│[0m   [2m186 [0m[2m│   │   │   │   [0m[94mreturn[0m obj  [2m# type: ignore[return-value][0m               [31m│[0m
+agent-worker-1  | [31m│[0m   [2m187 [0m[2m│   │   [0m                                                               [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m188 [2m│   │   [0mresponse = [1;4;94mawait[0m[1;4m retry_async([0m                                  [31m│[0m
+agent-worker-1  | [31m│[0m   [2m189 [0m[2m│   │   │   [0m[1;4mfunc=func,  [0m[1;2;4m# type:ignore[0m                                  [31m│[0m
+agent-worker-1  | [31m│[0m   [2m190 [0m[2m│   │   │   [0m[1;4mresponse_model=response_model,[0m                             [31m│[0m
+agent-worker-1  | [31m│[0m   [2m191 [0m[2m│   │   │   [0m[1;4mcontext=context,[0m                                           [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m [2m/usr/local/lib/python3.11/site-packages/instructor/core/[0m[1mretry.py[0m:491 in      [31m│[0m
+agent-worker-1  | [31m│[0m retry_async                                                                  [31m│[0m
+agent-worker-1  | [31m│[0m                                                                              [31m│[0m
+agent-worker-1  | [31m│[0m   [2m488 [0m[2m│   │   │   │   │   [0m[94mraise[0m e                                            [31m│[0m
+agent-worker-1  | [31m│[0m   [2m489 [0m[2m│   [0m[94mexcept[0m RetryError [94mas[0m e:                                            [31m│[0m
+agent-worker-1  | [31m│[0m   [2m490 [0m[2m│   │   [0mlogger.debug([33mf[0m[33m"[0m[33mRetry error: [0m[33m{[0me[33m}[0m[33m"[0m)                              [31m│[0m
+agent-worker-1  | [31m│[0m [31m❱ [0m491 [2m│   │   [0m[1;4;94mraise[0m[1;4m InstructorRetryException([0m                                [31m│[0m
+agent-worker-1  | [31m│[0m   [2m492 [0m[2m│   │   │   [0m[1;4me.last_attempt._exception,[0m                                 [31m│[0m
+agent-worker-1  | [31m│[0m   [2m493 [0m[2m│   │   │   [0m[1;4mlast_completion=response,[0m                                  [31m│[0m
+agent-worker-1  | [31m│[0m   [2m494 [0m[2m│   │   │   [0m[1;4mn_attempts=attempt.retry_state.attempt_number,[0m             [31m│[0m
+agent-worker-1  | [31m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+agent-worker-1  | [1;91mInstructorRetryException: [0m[1m<[0m[1;95mfailed_attempts[0m[39m>[0m
+agent-worker-1  | 
+agent-worker-1  | [39m<generation [0m[33mnumber[0m[39m=[0m[32m"1"[0m[39m>[0m
+agent-worker-1  | [39m<exception>[0m
+agent-worker-1  | [39m    Connection error.[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mexception[0m[39m>[0m
+agent-worker-1  | [39m<completion>[0m
+agent-worker-1  | [39m    [0m[3;35mNone[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mcompletion[0m[39m>[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mgeneration[0m[39m>[0m
+agent-worker-1  | 
+agent-worker-1  | [39m<generation [0m[33mnumber[0m[39m=[0m[32m"2"[0m[39m>[0m
+agent-worker-1  | [39m<exception>[0m
+agent-worker-1  | [39m    Connection error.[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mexception[0m[39m>[0m
+agent-worker-1  | [39m<completion>[0m
+agent-worker-1  | [39m    [0m[3;35mNone[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mcompletion[0m[39m>[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mgeneration[0m[39m>[0m
+agent-worker-1  | 
+agent-worker-1  | [39m<[0m[35m/[0m[95mfailed_attempts[0m[39m>[0m
+agent-worker-1  | 
+agent-worker-1  | [39m<last_exception>[0m
+agent-worker-1  | [39m    Connection error.[0m
+agent-worker-1  | [39m<[0m[35m/[0m[95mlast_exception[0m[1m>[0m
+agent-worker-1  | 
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:33.223359[0m [[31m[1merror    [0m] [1mException caught while processing data: <failed_attempts>
+agent-worker-1  | 
+agent-worker-1  | <generation number="1">
+agent-worker-1  | <exception>
+agent-worker-1  |     Connection error.
+agent-worker-1  | </exception>
+agent-worker-1  | <completion>
+agent-worker-1  |     None
+agent-worker-1  | </completion>
+agent-worker-1  | </generation>
+agent-worker-1  | 
+agent-worker-1  | <generation number="2">
+agent-worker-1  | <exception>
+agent-worker-1  |     Connection error.
+agent-worker-1  | </exception>
+agent-worker-1  | <completion>
+agent-worker-1  |     None
+agent-worker-1  | </completion>
+agent-worker-1  | </generation>
+agent-worker-1  | 
+agent-worker-1  | </failed_attempts>
+agent-worker-1  | 
+agent-worker-1  | <last_exception>
+agent-worker-1  |     Connection error.
+agent-worker-1  | </last_exception>.
+agent-worker-1  |  Data processing failed for data item: <cognee.modules.data.models.Data.Data object at 0x74fbac5a0410>.[0m [[0m[1m[34mrun_tasks_data_item[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:33.227416[0m [[33m[1mwarning  [0m] [1mPotential RPM issues detected (APITimeoutError) — slowing down processing to accommodate: enabling the RPM limiter (10 requests per 60s) for the next 900s, extended while issues persist. Tune LLM_RATE_LIMIT_REQUESTS / LLM_RATE_LIMIT_INTERVAL to match what your provider or machine can handle, or set AUTO_RATE_LIMIT=false to opt out.[0m [[0m[1m[34mllm_dispatch[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:33.240748[0m [[32m[1minfo     [0m] [1mCognify rollback completed for run f2a691ef-a63c-47a5-8054-b6ea226715f7 (dataset=13546675-ce88-536b-b049-78c2ee4cc488, user=7b2f248e-3634-4012-b717-35ca97f0b561, rows=0 nodes/0 edges).[0m [[0m[1m[34mcognify.rollback[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:34.367486[0m [[32m[1minfo     [0m] [1mLadybug database closed successfully[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+agent-worker-1  | [WARN] Failed to add Cognee error task memory: <failed_attempts>
+agent-worker-1  | 
+agent-worker-1  | <generation number="1">
+agent-worker-1  | <exception>
+agent-worker-1  |     Connection error.
+agent-worker-1  | </exception>
+agent-worker-1  | <completion>
+agent-worker-1  |     None
+agent-worker-1  | </completion>
+agent-worker-1  | </generation>
+agent-worker-1  | 
+agent-worker-1  | <generation number="2">
+agent-worker-1  | <exception>
+agent-worker-1  |     Connection error.
+agent-worker-1  | </exception>
+agent-worker-1  | <completion>
+agent-worker-1  |     None
+agent-worker-1  | </completion>
+agent-worker-1  | </generation>
+agent-worker-1  | 
+agent-worker-1  | </failed_attempts>
+agent-worker-1  | 
+agent-worker-1  | <last_exception>
+agent-worker-1  |     Connection error.
+agent-worker-1  | </last_exception>
+agent-worker-1  | [INFO] AGENT_WORKER_SINGLE_JOB enabled after failed job; exiting to release Cognee/Ladybug DB handles.
+agent-worker-1  | 
+agent-worker-1  | [1mUnclosed client session
+agent-worker-1  | client_session: <aiohttp.client.ClientSession object at 0x74fbe0991d90>[0m
+agent-worker-1  | 
+agent-worker-1  | [1mUnclosed connector
+agent-worker-1  | connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x74fbac159cd0>, 7902.766474181), (<aiohttp.client_proto.ResponseHandler object at 0x74fbac1629d0>, 7902.768352366), (<aiohttp.client_proto.ResponseHandler object at 0x74fbac59d1d0>, 7902.774059696), (<aiohttp.client_proto.ResponseHandler object at 0x74fbac1621d0>, 7902.775451922)])']
+agent-worker-1  | connector: <aiohttp.connector.TCPConnector object at 0x74fbe05891d0>[0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:37.685635[0m [[32m[1minfo     [0m] [1mDeleted old log file: /var/lib/agent-runner/cognee/logs/2026-08-07_00-22-18.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:37.685855[0m [[32m[1minfo     [0m] [1mLog file created at: /var/lib/agent-runner/cognee/logs/2026-08-07_04-49-37.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mlog_file[0m=[35m/var/lib/agent-runner/cognee/logs/2026-08-07_04-49-37.log[0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:37.686001[0m [[33m[1mwarning  [0m] [1mCognee 1.0 changes: New API — remember/recall/forget/improve (V1 add/cognify/search still work). Session memory enabled by default (CACHING=false to disable). Multi-user access control on by default (ENABLE_BACKEND_ACCESS_CONTROL=false to disable). Agents (@cognee.agent) auto-verified on registration. See https://docs.cognee.ai/[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:37.686149[0m [[32m[1minfo     [0m] [1mLogging initialized           [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mcognee_version[0m=[35m1.4.1[0m [36mdatabase_path[0m=[35m/var/lib/agent-runner/cognee/system/databases[0m [36mos_info[0m=[35m'Linux 6.18.41 (#1-NixOS SMP PREEMPT_DYNAMIC Thu Jul 30 11:05:57 UTC 2026)'[0m [36mpython_version[0m=[35m3.11.15[0m [36mstructlog_version[0m=[35m25.5.0[0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:37.686330[0m [[32m[1minfo     [0m] [1mDatabase storage: /var/lib/agent-runner/cognee/system/databases[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:38.075033[0m [[32m[1minfo     [0m] [1mauth posture: authentication=required, multi_tenant=enabled (default (no env vars set))[0m [[0m[1m[34mget_authenticated_user[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [2m2026-08-07T04:49:40.563105[0m [[33m[1mwarning  [0m] [1mModel 'qwen3-coder:30b' has not been validated for structured graph extraction. Cognee will continue execution, but extraction quality may vary. See docs/ollama_models.md for recommended models.[0m [[0m[1m[34mollama_support[0m][0m
+agent-worker-1  | 
+agent-worker-1  | [1mFound credentials in environment variables.[0m
+agent-worker-1  | Agent worker started. Waiting for SQS jobs...
+
+---- cognee-indexer ----
+cognee-indexer-1  | [2m2026-08-07T00:33:07.919744[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:33:07.973945[0m [[32m[1minfo     [0m] [1mPipeline run completed: `beea0ee3-df74-5abb-9128-87d999fb0842`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.570869[0m [[32m[1minfo     [0m] [1mNo close match found for 'class' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.571224[0m [[32m[1minfo     [0m] [1mNo close match found for 'uspellcastingcomponent' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.571509[0m [[32m[1minfo     [0m] [1mNo close match found for 'uspelldefinition' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.571801[0m [[32m[1minfo     [0m] [1mNo close match found for 'uspellcastbehavior' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.572043[0m [[32m[1minfo     [0m] [1mNo close match found for 'uspellimpactbehavior' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.572264[0m [[32m[1minfo     [0m] [1mNo close match found for 'struct' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.572477[0m [[32m[1minfo     [0m] [1mNo close match found for 'fspellcastrequest' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.573699[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.619578[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '2377d6fa-c5d3-5b93-965d-2f430935cbc4', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.619782[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '2c2aa0e4-c764-585b-afc0-128b2bab0e11', 'nodes_extracted': 2, 'edges_extracted': 1}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.623934[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '26a59298-368c-5afb-92ac-f4347aa79d28', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.624199[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '0d9d6814-4eaf-5f85-a3c5-df41a04904d4', 'nodes_extracted': 2, 'edges_extracted': 2}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.624815[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'e7134110-68cc-588a-9a8d-cb9458da48fb', 'nodes_extracted': 1, 'edges_extracted': 2}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.625111[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '81967e82-444b-56a2-a951-1661d8f7e168', 'nodes_extracted': 4, 'edges_extracted': 8}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.625771[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '8566bf49-5420-5c82-89c6-950ae36aa1f8', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.625979[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '69ce0722-10dd-57ad-87fa-41ef87828c92', 'nodes_extracted': 2, 'edges_extracted': 2}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.626270[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'fbdea08d-b997-54de-9d91-c1fa3e0204f4', 'nodes_extracted': 7, 'edges_extracted': 14}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.626777[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'f0a5d050-174a-5aa5-885f-be181ed0a637', 'nodes_extracted': 10, 'edges_extracted': 22}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:35.626987[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '877ebe2e-6caf-5f5c-b344-29393db37522', 'nodes_extracted': 11, 'edges_extracted': 24}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.223672[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.292833[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.339463[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.379009[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_and_summarize`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.420582[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.464620[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:42.505146[0m [[32m[1minfo     [0m] [1mPipeline run completed: `beea0ee3-df74-5abb-9128-87d999fb0842`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.536714[0m [[32m[1minfo     [0m] [1mNo close match found for 'class' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.537075[0m [[32m[1minfo     [0m] [1mNo close match found for 'gameinstance' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.537610[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.577522[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '2377d6fa-c5d3-5b93-965d-2f430935cbc4', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.577776[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '93f0ff04-a19b-51e9-a557-a361d27820be', 'nodes_extracted': 2, 'edges_extracted': 1}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.578779[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '26a59298-368c-5afb-92ac-f4347aa79d28', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.579090[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '917ccb87-f330-5fb7-9125-cbf7d4d073e5', 'nodes_extracted': 2, 'edges_extracted': 2}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.579422[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '9fdf3d22-7e26-5906-aa3f-2ea2fa09c4b2', 'nodes_extracted': 5, 'edges_extracted': 6}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:46.579802[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'da337388-f2c8-5870-99df-3e0464f27b7b', 'nodes_extracted': 6, 'edges_extracted': 8}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.639398[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.696221[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.751013[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.805534[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_and_summarize`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.859015[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.912407[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:48.964672[0m [[32m[1minfo     [0m] [1mPipeline run completed: `beea0ee3-df74-5abb-9128-87d999fb0842`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.799776[0m [[32m[1minfo     [0m] [1mNo close match found for 'folder' in category 'classes'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.800229[0m [[32m[1minfo     [0m] [1mNo close match found for 'playercontrollers' in category 'individuals'[0m [[0m[1m[34mOntologyAdapter[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.800965[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.838770[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '2377d6fa-c5d3-5b93-965d-2f430935cbc4', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.838977[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'a0cf8cb1-ac57-5f1b-94cc-6ac94a555756', 'nodes_extracted': 2, 'edges_extracted': 1}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.839681[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'ed0a3303-59f6-5e2c-9ca9-a904a0df0968', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.839936[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '56358afe-17d0-5bc2-84c6-91998c5c3b63', 'nodes_extracted': 2, 'edges_extracted': 2}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.840145[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '7a488425-61c5-5062-857b-b15890fb2d52', 'nodes_extracted': 5, 'edges_extracted': 6}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:55.840342[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'e27813b1-7c84-5f91-a2b1-a5a79968abe0', 'nodes_extracted': 6, 'edges_extracted': 8}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:57.852390[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:57.894044[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:57.931158[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:57.966675[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_and_summarize`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:58.003287[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:58.039587[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:36:58.076398[0m [[32m[1minfo     [0m] [1mPipeline run completed: `beea0ee3-df74-5abb-9128-87d999fb0842`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:06.005395[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:06.047305[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '2377d6fa-c5d3-5b93-965d-2f430935cbc4', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:06.047512[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'aaa2a431-0cab-5039-a5f8-56162799f884', 'nodes_extracted': 2, 'edges_extracted': 1}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:06.047738[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '878df030-65ca-56fb-ab4c-8564630ce4b6', 'nodes_extracted': 3, 'edges_extracted': 3}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:06.047960[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '6143d3a2-7b7a-5cd4-bac4-2e0b4f01b098', 'nodes_extracted': 4, 'edges_extracted': 5}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:11.828199[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:11.883274[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:11.924501[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:11.963361[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_and_summarize`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:12.000279[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:12.036868[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:12.073380[0m [[32m[1minfo     [0m] [1mPipeline run completed: `beea0ee3-df74-5abb-9128-87d999fb0842`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.780688[0m [[32m[1minfo     [0m] [1mCoroutine task started: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.818162[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '2377d6fa-c5d3-5b93-965d-2f430935cbc4', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.818370[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '1405a96b-bdd4-5528-94fe-1b89e179b926', 'nodes_extracted': 2, 'edges_extracted': 1}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.819222[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'ed0a3303-59f6-5e2c-9ca9-a904a0df0968', 'nodes_extracted': 1, 'edges_extracted': 0}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.819472[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'd27473e8-2643-5660-a012-377e4fba407b', 'nodes_extracted': 2, 'edges_extracted': 2}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.819797[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': 'bc8580d2-12a8-5dda-8f4f-a8dc7fb7aa90', 'nodes_extracted': 5, 'edges_extracted': 6}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:14.820082[0m [[32m[1minfo     [0m] [1mCompleted graph extraction for DataPoint[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mextra[0m=[35m{'datapoint_id': '6aa50314-1a97-50ae-9307-00ab44025420', 'nodes_extracted': 6, 'edges_extracted': 8}[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.840185[0m [[32m[1minfo     [0m] [1mCoroutine task started: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.890507[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_dlt_fk_edges`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.912518[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `add_data_points`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.933654[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `extract_graph_and_summarize`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.953811[0m [[32m[1minfo     [0m] [1mAsync Generator task completed: `extract_chunks_from_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.973853[0m [[32m[1minfo     [0m] [1mCoroutine task completed: `classify_documents`[0m [[0m[1m[34mrun_tasks_base[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:15.993916[0m [[32m[1minfo     [0m] [1mPipeline run completed: `beea0ee3-df74-5abb-9128-87d999fb0842`[0m [[0m[1m[34mrun_tasks_with_telemetry()[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:17.191631[0m [[32m[1minfo     [0m] [1mLadybug database closed successfully[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+cognee-indexer-1  | [INFO] Released global task lock for cognee-indexer
+cognee-indexer-1  | [INFO] Completed Cognee SQS job.
+cognee-indexer-1  | [INFO] COGNEE_INDEXER_SINGLE_JOB enabled; exiting to release Cognee/Ladybug DB handles.
+cognee-indexer-1  | 
+cognee-indexer-1  | [1mUnclosed client session
+cognee-indexer-1  | client_session: <aiohttp.client.ClientSession object at 0x729f200f08d0>[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [1mUnclosed connector
+cognee-indexer-1  | connections: ['deque([(<aiohttp.client_proto.ResponseHandler object at 0x729eda457250>, 943.175233716), (<aiohttp.client_proto.ResponseHandler object at 0x729eda456b50>, 943.183461612), (<aiohttp.client_proto.ResponseHandler object at 0x729eda455050>, 943.183520768), (<aiohttp.client_proto.ResponseHandler object at 0x729ed843c550>, 943.185809895), (<aiohttp.client_proto.ResponseHandler object at 0x729eda4565d0>, 943.185987013), (<aiohttp.client_proto.ResponseHandler object at 0x729ed831b1d0>, 943.196374689), (<aiohttp.client_proto.ResponseHandler object at 0x729eda4564d0>, 943.201504063)])']
+cognee-indexer-1  | connector: <aiohttp.connector.TCPConnector object at 0x729f1eb34110>[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:20.466442[0m [[32m[1minfo     [0m] [1mDeleted old log file: /var/lib/agent-runner/cognee/logs/2026-08-07_00-22-03.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:20.466748[0m [[32m[1minfo     [0m] [1mLog file created at: /var/lib/agent-runner/cognee/logs/2026-08-07_00-37-20.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mlog_file[0m=[35m/var/lib/agent-runner/cognee/logs/2026-08-07_00-37-20.log[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:20.466875[0m [[33m[1mwarning  [0m] [1mCognee 1.0 changes: New API — remember/recall/forget/improve (V1 add/cognify/search still work). Session memory enabled by default (CACHING=false to disable). Multi-user access control on by default (ENABLE_BACKEND_ACCESS_CONTROL=false to disable). Agents (@cognee.agent) auto-verified on registration. See https://docs.cognee.ai/[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:20.466990[0m [[32m[1minfo     [0m] [1mLogging initialized           [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mcognee_version[0m=[35m1.4.1[0m [36mdatabase_path[0m=[35m/var/lib/agent-runner/cognee/system/databases[0m [36mos_info[0m=[35m'Linux 6.18.41 (#1-NixOS SMP PREEMPT_DYNAMIC Thu Jul 30 11:05:57 UTC 2026)'[0m [36mpython_version[0m=[35m3.11.15[0m [36mstructlog_version[0m=[35m25.5.0[0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:20.467116[0m [[32m[1minfo     [0m] [1mDatabase storage: /var/lib/agent-runner/cognee/system/databases[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:20.883726[0m [[32m[1minfo     [0m] [1mauth posture: authentication=required, multi_tenant=enabled (default (no env vars set))[0m [[0m[1m[34mget_authenticated_user[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [2m2026-08-07T00:37:23.416474[0m [[33m[1mwarning  [0m] [1mModel 'qwen3-coder:30b' has not been validated for structured graph extraction. Cognee will continue execution, but extraction quality may vary. See docs/ollama_models.md for recommended models.[0m [[0m[1m[34mollama_support[0m][0m
+cognee-indexer-1  | 
+cognee-indexer-1  | [1mFound credentials in environment variables.[0m
+cognee-indexer-1  | Cognee indexer started. Waiting for SQS jobs...
+
+---- debug-worker ----
+debug-worker-1  | 
+debug-worker-1  | [2m2026-08-07T00:22:53.631162[0m [[32m[1minfo     [0m] [1mLog file created at: /var/lib/agent-runner/cognee/logs/2026-08-07_00-22-53.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mlog_file[0m=[35m/var/lib/agent-runner/cognee/logs/2026-08-07_00-22-53.log[0m
+debug-worker-1  | 
+debug-worker-1  | [2m2026-08-07T00:22:53.631432[0m [[33m[1mwarning  [0m] [1mCognee 1.0 changes: New API — remember/recall/forget/improve (V1 add/cognify/search still work). Session memory enabled by default (CACHING=false to disable). Multi-user access control on by default (ENABLE_BACKEND_ACCESS_CONTROL=false to disable). Agents (@cognee.agent) auto-verified on registration. See https://docs.cognee.ai/[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+debug-worker-1  | 
+debug-worker-1  | [2m2026-08-07T00:22:53.631597[0m [[32m[1minfo     [0m] [1mLogging initialized           [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mcognee_version[0m=[35m1.4.1[0m [36mdatabase_path[0m=[35m/var/lib/agent-runner/cognee/system/databases[0m [36mos_info[0m=[35m'Linux 6.18.41 (#1-NixOS SMP PREEMPT_DYNAMIC Thu Jul 30 11:05:57 UTC 2026)'[0m [36mpython_version[0m=[35m3.11.15[0m [36mstructlog_version[0m=[35m25.5.0[0m
+debug-worker-1  | 
+debug-worker-1  | [2m2026-08-07T00:22:53.631770[0m [[32m[1minfo     [0m] [1mDatabase storage: /var/lib/agent-runner/cognee/system/databases[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+debug-worker-1  | 
+debug-worker-1  | [2m2026-08-07T00:22:54.091762[0m [[32m[1minfo     [0m] [1mauth posture: authentication=required, multi_tenant=enabled (default (no env vars set))[0m [[0m[1m[34mget_authenticated_user[0m][0m
+debug-worker-1  | 
+debug-worker-1  | [2m2026-08-07T00:22:56.930650[0m [[33m[1mwarning  [0m] [1mModel 'qwen3-coder:30b' has not been validated for structured graph extraction. Cognee will continue execution, but extraction quality may vary. See docs/ollama_models.md for recommended models.[0m [[0m[1m[34mollama_support[0m][0m
+debug-worker-1  | 
+debug-worker-1  | [1mFound credentials in environment variables.[0m
+debug-worker-1  | Debug worker started. Waiting for SQS jobs...
+
+
+================================================================
+== Focused container state
+================================================================
+
+$ docker inspect 9d2b5af569bb88ec08bf1e27fed48ef283e7a30f0371afb8f79872b311c5f98f --format name=\{\{.Name\}\}\ image=\{\{.Config.Image\}\}\ status=\{\{.State.Status\}\}\ running=\{\{.State.Running\}\}\ exit=\{\{.State.ExitCode\}\}\ health=\{\{if\ .State.Health\}\}\{\{.State.Health.Status\}\}\{\{else\}\}none\{\{end\}\}\ error=\{\{json\ .State.Error\}\}\ oom=\{\{.State.OOMKilled\}\}\ networks=\{\{json\ .NetworkSettings.Networks\}\}
+name=/cognimoss-local-moto-1 image=motoserver/moto:5.1.20 status=running running=true exit=0 health=healthy error="" oom=false networks={"cognimoss-local_default":{"IPAMConfig":null,"Links":null,"Aliases":["cognimoss-local-moto-1","moto"],"DriverOpts":null,"GwPriority":0,"NetworkID":"e325f3ee75f674e43e8e0e167329f2a9cde19668f7aab659a18b8b239c37a398","EndpointID":"d31733a628e465ff270feb6b056d03934010278ed484de9b3928fe8429a21eff","Gateway":"172.18.0.1","IPAddress":"172.18.0.2","MacAddress":"a6:2e:2b:09:35:83","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"DNSNames":["cognimoss-local-moto-1","moto","9d2b5af569bb"]}}
+[exit=0]
+
+$ docker inspect 969253f05d96c7c766c2c76a3e3fc7fb4bdc96b02e082d9bfe502fa9eef2ead4 --format name=\{\{.Name\}\}\ image=\{\{.Config.Image\}\}\ status=\{\{.State.Status\}\}\ running=\{\{.State.Running\}\}\ exit=\{\{.State.ExitCode\}\}\ health=\{\{if\ .State.Health\}\}\{\{.State.Health.Status\}\}\{\{else\}\}none\{\{end\}\}\ error=\{\{json\ .State.Error\}\}\ oom=\{\{.State.OOMKilled\}\}\ networks=\{\{json\ .NetworkSettings.Networks\}\}
+name=/cognimoss-local-frontend-1 image=cognimoss-local-frontend status=running running=true exit=0 health=none error="" oom=false networks={"cognimoss-local_default":{"IPAMConfig":null,"Links":null,"Aliases":["cognimoss-local-frontend-1","frontend"],"DriverOpts":null,"GwPriority":0,"NetworkID":"e325f3ee75f674e43e8e0e167329f2a9cde19668f7aab659a18b8b239c37a398","EndpointID":"24d9d08ab1cad743bc9e0fdb53f84063fae86f28fcb087434eb734bd63239626","Gateway":"172.18.0.1","IPAddress":"172.18.0.3","MacAddress":"76:79:cc:0b:f6:78","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"DNSNames":["cognimoss-local-frontend-1","frontend","969253f05d96"]}}
+[exit=0]
+
+
+================================================================
+== Automated interpretation
+================================================================
+Host Ollama:                    0
+Configured OLLAMA_URL:          0
+host.docker.internal path:      0
+Direct Compose gateway path:    0
+Host Moto:                      1
+local-init -> moto:             1
+Boto3 STS -> Moto:              1
+
+LIKELY ROOT CAUSE:
+Ollama itself is not reachable on the host. Inspect the systemd status,
+journal, and listening socket above.
+
+
+================================================================
+== Report summary
+================================================================
+Checks passed:  5
+Checks failed:  4
+Warnings:       3
+Finished:       2026-08-06T21:50:03-07:00
+Report written: /home/agent/projects/github_coding_agent/cognimoss-wiring-report-20260806-214955.txt
