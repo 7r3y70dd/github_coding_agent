@@ -150,8 +150,9 @@ This means the development shell can be used on distributions such as:
 If Nix is not already installed, install the Nix package manager first and enable the `nix-command` and `flakes` experimental features.
 
 Nix instalation command:
+```bash
 curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install | sh -s -- --daemon
-
+```
 After Nix is installed, the Cognimoss development environment is entered from the repository with:
 
 ```bash
