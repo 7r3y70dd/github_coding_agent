@@ -109,7 +109,561 @@ Their responsibilities are:
 
 # Requirements
 
+## Nix Development Environment
 
+Cognimoss includes a Nix flake that provides a reproducible development shell with the tools needed to build, run, inspect, and debug the local application.
+
+The flake supports:
+
+- `x86_64-linux`
+- `aarch64-linux`
+
+Two development shells are available:
+
+- `default` — portable CPU Ollama
+- `cuda` — NVIDIA CUDA-enabled Ollama on `x86_64-linux`
+
+Docker remains the authoritative runtime for the full Cognimoss stack. The Nix shell provides the host-side development tools, Ollama runtime, Python tooling, and `cognimoss-*` helper commands used to manage the project.
+
+### NixOS Is Not Required
+
+You do **not** need to run NixOS to use the Cognimoss development environment.
+
+Cognimoss only requires the **Nix package manager** on a supported Linux system.
+
+The current flake supports:
+
+```text
+x86_64-linux
+aarch64-linux
+```
+
+This means the development shell can be used on distributions such as:
+
+- Ubuntu
+- Debian
+- Fedora
+- Arch Linux
+- NixOS
+- other compatible Linux distributions
+
+If Nix is not already installed, install the Nix package manager first and enable the `nix-command` and `flakes` experimental features.
+
+Nix instalation command:
+curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install | sh -s -- --daemon
+
+After Nix is installed, the Cognimoss development environment is entered from the repository with:
+
+```bash
+nix develop
+```
+
+or, for the NVIDIA CUDA development shell on `x86_64-linux`:
+
+```bash
+nix develop .#cuda
+```
+
+The project flake then provides the development packages and `cognimoss-*` helper commands described below.
+
+> **Note:** The Nix development shell provides the Docker CLI and Docker Compose, but a working Docker daemon must still be available on the host. Likewise, the flake provides Ollama itself, while host GPU drivers and other hardware-level requirements must already be configured by the operating system.
+
+### Enable Nix Flakes
+
+Your Nix installation must have the following experimental features enabled:
+
+```text
+nix-command
+flakes
+```
+
+On NixOS:
+
+```nix
+nix.settings.experimental-features = [
+  "nix-command"
+  "flakes"
+];
+```
+
+### Enter the Development Shell
+
+From the repository:
+
+```bash
+cd github_coding_agent
+```
+
+For the portable CPU environment:
+
+```bash
+nix develop
+```
+
+For the NVIDIA CUDA environment on `x86_64-linux`:
+
+```bash
+nix develop .#cuda
+```
+
+The CUDA shell uses `ollama-cuda`.
+
+The current flake is configured for CUDA compute capability:
+
+```text
+8.9
+```
+
+which corresponds to the project's RTX 4070 Ti / Ada Lovelace development target.
+
+On non-`x86_64-linux` systems, the `cuda` shell falls back to the normal CPU Ollama package.
+
+### Development Tools Provided
+
+The Nix development environment includes:
+
+#### Python
+
+- Python 3.11
+- pip
+- setuptools
+- wheel
+- virtualenv
+- pytest
+
+#### Git and GitHub
+
+- git
+- git-lfs
+- GitHub CLI (`gh`)
+- OpenSSH
+
+#### Containers
+
+- Docker
+- Docker Compose
+
+#### AWS
+
+- AWS CLI v2
+
+#### HTTP, Data, and Debugging
+
+- curl
+- wget
+- jq
+- yq
+- ripgrep
+- fd
+- tree
+- lsof
+- iproute2
+
+#### Native Build Tools
+
+- GCC
+- Make
+- CMake
+- Ninja
+- pkg-config
+- patchelf
+- Rust
+- Cargo
+
+#### Native Libraries
+
+- OpenSSL
+- libffi
+- zlib
+- SQLite
+- libxml2
+- libxslt
+- libjpeg
+- libpng
+
+#### Quality and Formatting
+
+- ruff
+- shellcheck
+- shfmt
+- yamllint
+- nixfmt
+
+The development shell also configures `LD_LIBRARY_PATH` so pip-installed native extensions can locate common libraries provided by Nix.
+
+### Environment Configured by `nix develop`
+
+Entering the development shell automatically configures the project's Python import path:
+
+```text
+cognimoss-core/
+backend_package/
+frontend_package/
+```
+
+The Compose file is exposed as:
+
+```text
+COGNIMOSS_COMPOSE_FILE=$PWD/docker-compose.local.yml
+```
+
+Ollama models are stored locally under the repository instead of inside the Nix store:
+
+```text
+.local/ollama-models/
+```
+
+The corresponding environment variable is:
+
+```text
+OLLAMA_MODELS=$PWD/.local/ollama-models
+```
+
+The shell creates the `.local` directory automatically.
+
+Docker BuildKit is also enabled:
+
+```text
+DOCKER_BUILDKIT=1
+COMPOSE_DOCKER_CLI_BUILD=1
+```
+
+### First-Time Setup
+
+After entering the development shell, create the local environment file:
+
+```bash
+cp .env.local.example .env.local
+```
+
+Then edit `.env.local` and replace the required secrets and configuration values described later in this README.
+
+Most `cognimoss-*` Docker commands require `.env.local`.
+
+If it does not exist, the helper commands stop and display:
+
+```text
+ERROR: .env.local does not exist.
+Create it with:
+  cp .env.local.example .env.local
+```
+
+### Cognimoss Helper Commands
+
+The Nix development shell defines the following project-management commands.
+
+#### `cognimoss-ollama`
+
+Start the host Ollama server so Docker containers can reach it:
+
+```bash
+cognimoss-ollama
+```
+
+This starts Ollama with:
+
+```text
+OLLAMA_HOST=0.0.0.0:11434
+```
+
+Cognimoss containers reach the host server through `host.docker.internal`.
+
+> **Security:** Ollama listens on all host interfaces when started this way. Make sure TCP port `11434` is not exposed to untrusted networks.
+
+Keep this process running while using the local Ollama-backed stack.
+
+#### `cognimoss-models`
+
+Pull the local models expected by the development environment:
+
+```bash
+cognimoss-models
+```
+
+The current flake pulls:
+
+```text
+qwen2.5-coder:14b
+nomic-embed-text
+```
+
+These provide the default local coding/LLM and embedding workloads.
+
+#### `cognimoss-up`
+
+Build the Docker images and start the complete local Cognimoss stack:
+
+```bash
+cognimoss-up
+```
+
+Equivalent Compose operation:
+
+```bash
+docker compose \
+  --env-file "$PWD/.env.local" \
+  -f "$PWD/docker-compose.local.yml" \
+  up -d --build
+```
+
+Use this for the initial startup and after changes that require rebuilding Docker images.
+
+#### `cognimoss-ps`
+
+Show all Cognimoss Compose containers, including stopped initialization containers:
+
+```bash
+cognimoss-ps
+```
+
+Equivalent Compose operation:
+
+```bash
+docker compose \
+  --env-file "$PWD/.env.local" \
+  -f "$PWD/docker-compose.local.yml" \
+  ps -a
+```
+
+This is one of the first commands to use when diagnosing startup problems.
+
+#### `cognimoss-logs`
+
+Follow logs from the entire stack:
+
+```bash
+cognimoss-logs
+```
+
+Follow a specific service:
+
+```bash
+cognimoss-logs frontend
+```
+
+Other useful examples:
+
+```bash
+cognimoss-logs cognee-indexer
+cognimoss-logs agent-worker
+cognimoss-logs debug-worker
+```
+
+Additional arguments are passed directly to:
+
+```text
+docker compose logs -f
+```
+
+#### `cognimoss-check`
+
+Run the project's local verification script:
+
+```bash
+cognimoss-check
+```
+
+This executes:
+
+```text
+scripts/local-check.sh
+```
+
+The file must exist and be executable.
+
+If not, the helper reports:
+
+```text
+scripts/local-check.sh is missing or not executable.
+```
+
+Use this after initial setup and when diagnosing Docker, Moto, Ollama, or local service wiring.
+
+#### `cognimoss-down`
+
+Stop and remove the local Compose containers and network:
+
+```bash
+cognimoss-down
+```
+
+Equivalent operation:
+
+```bash
+docker compose \
+  --env-file "$PWD/.env.local" \
+  -f "$PWD/docker-compose.local.yml" \
+  down
+```
+
+Named Docker volumes are preserved.
+
+Use this for a normal shutdown.
+
+#### `cognimoss-reset`
+
+Completely reset the local Compose stack:
+
+```bash
+cognimoss-reset
+```
+
+Equivalent operation:
+
+```bash
+docker compose \
+  --env-file "$PWD/.env.local" \
+  -f "$PWD/docker-compose.local.yml" \
+  down -v
+```
+
+> **Warning: `cognimoss-reset` is destructive.**
+
+The `-v` option removes Compose-managed named volumes in addition to containers and networks.
+
+Do not use `cognimoss-reset` as a normal restart command if you want to preserve PostgreSQL, Cognee, Moto, or other volume-backed local state.
+
+Use this instead for normal shutdown:
+
+```bash
+cognimoss-down
+```
+
+#### `cognimoss-venv`
+
+Create an optional host-side Python virtual environment:
+
+```bash
+cognimoss-venv
+```
+
+This creates:
+
+```text
+.venv/
+```
+
+if necessary, activates it, upgrades:
+
+```text
+pip
+setuptools
+wheel
+```
+
+and installs:
+
+```text
+frontend_package/requirements.txt
+backend_package/requirements.txt
+```
+
+Docker remains the authoritative full-stack runtime.
+
+The host virtual environment is optional and is useful for direct Python development, testing, editor integration, and debugging outside the containers.
+
+### Command Reference
+
+| Command | Purpose |
+|---|---|
+| `nix develop` | Enter the portable/CPU Cognimoss development shell |
+| `nix develop .#cuda` | Enter the NVIDIA CUDA shell on `x86_64-linux` |
+| `cognimoss-ollama` | Start host Ollama on `0.0.0.0:11434` |
+| `cognimoss-models` | Pull `qwen2.5-coder:14b` and `nomic-embed-text` |
+| `cognimoss-up` | Build and start the complete local Docker stack |
+| `cognimoss-ps` | Show all local Cognimoss container states |
+| `cognimoss-logs` | Follow logs from the complete stack |
+| `cognimoss-logs <service>` | Follow logs from a specific Compose service |
+| `cognimoss-check` | Run `scripts/local-check.sh` |
+| `cognimoss-down` | Stop the stack while preserving named volumes |
+| `cognimoss-reset` | Stop the stack and delete Compose-managed named volumes |
+| `cognimoss-venv` | Create and populate the optional host Python `.venv` |
+
+### Typical CPU Startup
+
+For a new local CPU-based installation:
+
+```bash
+git clone <YOUR_COGNIMOSS_REPOSITORY_URL>
+cd github_coding_agent
+
+nix develop
+
+cp .env.local.example .env.local
+$EDITOR .env.local
+```
+
+Start Ollama in the first terminal:
+
+```bash
+cognimoss-ollama
+```
+
+Open a second terminal and enter the development environment again:
+
+```bash
+cd github_coding_agent
+nix develop
+```
+
+Then:
+
+```bash
+cognimoss-models
+cognimoss-up
+cognimoss-ps
+cognimoss-check
+```
+
+Follow logs with:
+
+```bash
+cognimoss-logs
+```
+
+### Typical NVIDIA CUDA Startup
+
+On a supported `x86_64-linux` NVIDIA system:
+
+```bash
+git clone <YOUR_COGNIMOSS_REPOSITORY_URL>
+cd github_coding_agent
+
+nix develop .#cuda
+
+cp .env.local.example .env.local
+$EDITOR .env.local
+```
+
+Start CUDA-enabled Ollama:
+
+```bash
+cognimoss-ollama
+```
+
+Then open another terminal:
+
+```bash
+cd github_coding_agent
+nix develop .#cuda
+```
+
+Pull the models and start Cognimoss:
+
+```bash
+cognimoss-models
+cognimoss-up
+cognimoss-check
+```
+
+The difference between the two development shells is the Ollama package:
+
+```text
+nix develop          -> pkgs.ollama
+nix develop .#cuda   -> pkgs.ollama-cuda on x86_64-linux
+```
+
+The remainder of the Cognimoss development tooling is shared between both environments.
 
 ## Common
 
